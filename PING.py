@@ -3,6 +3,19 @@ from tkinter import scrolledtext
 import subprocess
 import threading
 import ipaddress
+import socket
+import netifaces
+
+def get_local_ip():
+    try:
+        # Verbindung zu einem externen Server herstellen (z.B., Google DNS)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except socket.error:
+        return None
 
 def run_ping(ip_address, results, output_widget):
     try:
@@ -15,7 +28,7 @@ def run_ping(ip_address, results, output_widget):
     except subprocess.CalledProcessError:
         pass  # Falls der Ping fehlschlägt, ignorieren wir das
 
-def ping_ip_range(ip_range, output_widget):
+def ping_ip_range(ip_range, output_widget, local_ip):
     try:
         network = ipaddress.IPv4Network(ip_range, strict=False)
         total_addresses = network.num_addresses
@@ -25,6 +38,10 @@ def ping_ip_range(ip_range, output_widget):
 
         for ip_address in network.hosts():
             ip_address_str = str(ip_address)
+
+            # Überprüfe, ob die IP die lokale IP-Adresse ist, und überspringe sie
+            if ip_address_str == local_ip:
+                continue
 
             thread = threading.Thread(target=run_ping, args=(ip_address_str, results, output_widget))
             threads.append(thread)
@@ -40,8 +57,10 @@ def ping_ip_range(ip_range, output_widget):
 
 def start_pinging(ip_range, output_widget):
     output_widget.delete(1.0, tk.END)  # Lösche vorherige Ausgabe
+    local_ip = get_local_ip()
+    output_widget.insert(tk.END, f"Lokale IP-Adresse des Rechners: {local_ip}\n")
     output_widget.insert(tk.END, "Suche nach IPs...\n")
-    threading.Thread(target=ping_ip_range, args=(ip_range, output_widget)).start()
+    threading.Thread(target=ping_ip_range, args=(ip_range, output_widget, local_ip)).start()
 
 def main():
     root = tk.Tk()
