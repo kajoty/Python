@@ -48,7 +48,6 @@ class PingApp:
 
             if "Minimum" in result.stdout and ip_address != self.local_ip_label.cget("text").split(":")[1].strip():
                 results.append(ip_address)
-                self.output_text.insert(tk.END, f"IP gefunden: {ip_address}\n")
 
         except subprocess.CalledProcessError:
             pass  # Falls der Ping fehlschlägt, ignorieren wir das
@@ -74,17 +73,19 @@ class PingApp:
             # Sortiere die Ergebnisse aufsteigend
             sorted_results = sorted(results, key=lambda ip: ipaddress.IPv4Address(ip))
 
-            self.output_text.insert(tk.END, f"\nFertig! Gefundene IPs: {len(sorted_results)} von {total_addresses}\n")
+            # Lösche vorherige Ausgabe
+            self.output_text.delete(1.0, tk.END)
 
             for ip_address in sorted_results:
                 self.output_text.insert(tk.END, f"IP gefunden: {ip_address}\n")
+
+            self.output_text.insert(tk.END, f"\nFertig! Gefundene IPs: {len(sorted_results)} von {total_addresses}\n")
 
         except ValueError:
             self.output_text.insert(tk.END, "Ungültiges CIDR-Format für den IP-Adressbereich.\n")
 
     def start_pinging(self):
-        self.output_text.delete(1.0, tk.END)  # Lösche vorherige Ausgabe
-        self.ping_ip_range()
+        threading.Thread(target=self.ping_ip_range).start()
 
 if __name__ == "__main__":
     root = tk.Tk()
