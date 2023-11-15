@@ -1,9 +1,10 @@
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, simpledialog
 import subprocess
 import threading
 import ipaddress
 import socket
+import tkinter.messagebox
 
 class PingApp:
     def __init__(self, root):
@@ -24,6 +25,17 @@ class PingApp:
         self.ip_range_entry = tk.Entry(root, width=30)
         self.ip_range_entry.pack(pady=10)
 
+        # Eingabefelder für Portbereich
+        self.port_from_label = tk.Label(root, text="Port von:")
+        self.port_from_label.pack(pady=5)
+        self.port_from_entry = tk.Entry(root, width=10)
+        self.port_from_entry.pack(pady=5)
+
+        self.port_to_label = tk.Label(root, text="Port bis:")
+        self.port_to_label.pack(pady=5)
+        self.port_to_entry = tk.Entry(root, width=10)
+        self.port_to_entry.pack(pady=10)
+
         # Textfeld für die Ausgabe
         self.output_text = scrolledtext.ScrolledText(root, width=50, height=10)
         self.output_text.pack(pady=10)
@@ -35,6 +47,10 @@ class PingApp:
         # Button zum Starten des Ping-Prozesses
         start_button = tk.Button(root, text="Start", command=self.start_pinging)
         start_button.pack(pady=10)
+
+        # Button für Portscan
+        scan_button = tk.Button(root, text="Portscan für ausgewählte IP", command=self.start_port_scan)
+        scan_button.pack(pady=10)
 
     def get_local_ip(self):
         try:
@@ -97,6 +113,43 @@ class PingApp:
 
     def start_pinging(self):
         threading.Thread(target=self.ping_ip_range).start()
+
+    def start_port_scan(self):
+        selected_ip = simpledialog.askstring("IP-Auswahl", "Geben Sie die IP-Adresse ein:")
+        if not selected_ip:
+            return
+
+        try:
+            port_from = int(self.port_from_entry.get())
+            port_to = int(self.port_to_entry.get())
+
+            # Führe den Portscan durch
+            open_ports = self.port_scan(selected_ip, range(port_from, port_to + 1))
+
+            if open_ports:
+                msg = f"Offene Ports für IP {selected_ip}: {', '.join(map(str, open_ports))}"
+            else:
+                msg = f"Keine offenen Ports gefunden für IP {selected_ip}"
+
+            tkinter.messagebox.showinfo("Portscan Ergebnis", msg)
+
+        except ValueError:
+            tkinter.messagebox.showerror("Fehler", "Ungültige Portnummer.")
+
+    def port_scan(self, ip_address, ports):
+        open_ports = []
+
+        for port in ports:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex((ip_address, port))
+
+            if result == 0:
+                open_ports.append(port)
+
+            sock.close()
+
+        return open_ports
 
 if __name__ == "__main__":
     root = tk.Tk()
