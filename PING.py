@@ -99,7 +99,8 @@ class PingApp:
             for result in sorted_results:
                 self.output_text.insert(tk.END, f"{result}\n")
 
-            self.output_text.insert(tk.END, f"\nFertig! Gefundene IPs: {len(sorted_results)} von {len(network.hosts())}\n")
+            total_addresses = sum(1 for _ in network.hosts())
+            self.output_text.insert(tk.END, f"\nFertig! Gefundene IPs: {len(sorted_results)} von {total_addresses}\n")
 
         except ValueError:
             self.output_text.insert(tk.END, "Ungültiges CIDR-Format für den IP-Adressbereich.\n")
