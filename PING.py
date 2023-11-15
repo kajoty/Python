@@ -28,6 +28,10 @@ class PingApp:
         self.output_text = scrolledtext.ScrolledText(root, width=50, height=10)
         self.output_text.pack(pady=10)
 
+        # Label für die "Bitte warten"-Nachricht
+        self.wait_label = tk.Label(root, text="")
+        self.wait_label.pack(pady=10)
+
         # Button zum Starten des Ping-Prozesses
         start_button = tk.Button(root, text="Start", command=self.start_pinging)
         start_button.pack(pady=10)
@@ -60,6 +64,9 @@ class PingApp:
             results = []
             threads = []
 
+            # Ändere die Nachricht im "Bitte warten"-Label
+            self.wait_label.config(text="Bitte warten. Suche läuft.")
+
             for ip_address in network.hosts():
                 ip_address_str = str(ip_address)
 
@@ -83,6 +90,10 @@ class PingApp:
 
         except ValueError:
             self.output_text.insert(tk.END, "Ungültiges CIDR-Format für den IP-Adressbereich.\n")
+
+        finally:
+            # Ändere die Nachricht im "Bitte warten"-Label zurück
+            self.wait_label.config(text="")
 
     def start_pinging(self):
         threading.Thread(target=self.ping_ip_range).start()
