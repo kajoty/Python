@@ -1,10 +1,9 @@
 import tkinter as tk
-from tkinter import scrolledtext, simpledialog
+from tkinter import ttk, scrolledtext, simpledialog, messagebox
 import subprocess
 import threading
 import ipaddress
 import socket
-import tkinter.messagebox
 
 class PingApp:
     def __init__(self, root):
@@ -43,6 +42,11 @@ class PingApp:
         # Label für die "Bitte warten"-Nachricht
         self.wait_label = tk.Label(root, text="")
         self.wait_label.pack(pady=10)
+
+        # Fortschrittsbalken für den Portscan
+        self.progress_bar = ttk.Progressbar(root, orient="horizontal", length=200, mode="determinate")
+
+        self.progress_bar.pack(pady=10)
 
         # Button zum Starten des Ping-Prozesses
         start_button = tk.Button(root, text="Start", command=self.start_pinging)
@@ -124,22 +128,20 @@ class PingApp:
             port_to = int(self.port_to_entry.get())
 
             # Führe den Portscan durch
-            open_ports = self.port_scan(selected_ip, range(port_from, port_to + 1))
-
-            if open_ports:
-                msg = f"Offene Ports für IP {selected_ip}: {', '.join(map(str, open_ports))}"
-            else:
-                msg = f"Keine offenen Ports gefunden für IP {selected_ip}"
-
-            tkinter.messagebox.showinfo("Portscan Ergebnis", msg)
+            self.output_text.delete(1.0, tk.END)
+            threading.Thread(target=self.port_scan, args=(selected_ip, range(port_from, port_to + 1))).start()
 
         except ValueError:
-            tkinter.messagebox.showerror("Fehler", "Ungültige Portnummer.")
+            messagebox.showerror("Fehler", "Ungültige Portnummer.")
 
     def port_scan(self, ip_address, ports):
         open_ports = []
 
-        for port in ports:
+        # Setze Fortschrittsbalken-Parameter
+        self.progress_bar["maximum"] = len(ports)
+        self.progress_bar["value"] = 0
+
+        for i, port in enumerate(ports):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
             result = sock.connect_ex((ip_address, port))
@@ -149,7 +151,22 @@ class PingApp:
 
             sock.close()
 
-        return open_ports
+            # Aktualisiere Fortschrittsbalken
+            self.progress_bar["value"] = i + 1
+            self.root.update_idletasks()
+
+        # Zeige das Ergebnis in der Ausgabe an
+        self.output_text.insert(tk.END, f"\nPortscan für IP {ip_address}:\n")
+
+        if open_ports:
+            self.output_text.insert(tk.END, f"Offene Ports: {', '.join(map(str, open_ports))}\n")
+        else:
+            self.output_text.insert(tk.END, "Keine offenen Ports gefunden.\n")
+
+        self.output_text.insert(tk.END, f"\nPortscan für IP {ip_address} abgeschlossen.\n")
+
+        # Infofenster anzeigen
+        messagebox.showinfo("Portscan Ergebnis", f"Portscan abgeschlossen für IP {ip_address}")
 
 if __name__ == "__main__":
     root = tk.Tk()
